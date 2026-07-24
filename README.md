@@ -48,7 +48,7 @@
 2. **Hybrid ML Anomaly Ensemble**: Combines **Isolation Forest** (Point Anomalies) and **Deep Autoencoders** (Reconstruction Error) for zero-day threat detection.
 3. **Explainable AI (SHAP XAI)**: Translates model predictions into normalized Risk Scores ($0\text{--}100$) and human-readable feature attribution lists.
 4. **Cold Start & Concept Drift Handling**: Role-Based Peer Group baseline inheritance for new users + ADWIN sliding-window adaptation.
-5. **Real-time Honeywell Forge Dashboard**: Sleek Dark UI (`#0F172A` / `#EE3124`) with live metrics, threat feed table, SHAP drawer, and one-click session quarantine.
+5. **Real-time Honeywell Forge Dashboard**: Sleek Dark UI (`#0B0F19` base) with live metrics, dynamic incident stream, SHAP drawer, and one-click session quarantine.
 
 ---
 
@@ -63,12 +63,23 @@
    ```
 3. **Start the FastAPI Backend & Dashboard**:
    ```bash
-   cd backend
-   python main.py
+   python backend/main.py
    ```
 4. **Open in Browser**:
-   * Dashboard: `http://localhost:8000` (or `http://127.0.0.1:8000`)
-   * Swagger Docs: `http://localhost:8000/docs`
+   * **Live Dashboard**: `http://localhost:8080` (or `http://127.0.0.1:8080`)
+   * **Interactive API Documentation**: `http://localhost:8080/docs`
+
+---
+
+## 📡 API Specification
+
+| Endpoint | Method | Description |
+| :--- | :--- | :--- |
+| `/api/v1/health` | `GET` | Health check & model status |
+| `/api/v1/telemetry/generate` | `POST` | Triggers synthetic log generation & ML inference |
+| `/api/v1/alerts/active` | `GET` | Fetches active high-risk anomaly alerts |
+| `/api/v1/alerts/{id}/explain` | `GET` | Retrieves SHAP feature attribution breakdown for an alert |
+| `/api/v1/remediation/action` | `POST` | Triggers session quarantine / IP isolation webhook |
 
 ---
 
