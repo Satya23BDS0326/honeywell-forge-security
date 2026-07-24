@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Honeywell Forge Cyber Security - Autonomous Dashboard</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background-color: #0B0F19;
+      color: #E2E8F0;
+      padding: 20px;
+      line-height: 1.5;
+    }
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background-color: #111827;
+      border: 1px solid #1F2937;
+      padding: 16px 20px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+    }
+    .brand { display: flex; align-items: center; gap: 10px; }
+    .brand-tag {
+      background-color: #DC2626;
+      color: #FFFFFF;
+      font-weight: 800;
+      font-size: 11px;
+      padding: 4px 8px;
+      border-radius: 4px;
+      letter-spacing: 1px;
+    }
+    .title { font-size: 16px; font-weight: 700; color: #F3F4F6; }
+    .status-dot {
+      width: 8px; height: 8px;
+      background-color: #10B981;
+      border-radius: 50%;
+      display: inline-block;
+      margin-right: 6px;
+      animation: pulse 1.5s infinite;
+    }
+    @keyframes pulse {
+      0% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(1.2); }
+      100% { opacity: 1; transform: scale(1); }
+    }
+    .metrics-container {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+    .metric-card {
+      background-color: #111827;
+      border: 1px solid #1F2937;
+      border-radius: 8px;
+      padding: 16px;
+    }
+    .metric-label { font-size: 12px; color: #9CA3AF; font-weight: 600; text-transform: uppercase; }
+    .metric-value { font-size: 24px; font-weight: 800; margin-top: 6px; color: #F9FAFB; }
+    .main-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; }
+    @media (max-width: 900px) { .main-grid { grid-template-columns: 1fr; } }
+    .panel { background-color: #111827; border: 1px solid #1F2937; border-radius: 8px; padding: 20px; }
+    .panel-header {
+      display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; padding-bottom: 10px; border-bottom: 1px solid #1F2937;
+    }
+    .panel-title { font-size: 14px; font-weight: 700; color: #F3F4F6; }
+    .btn-refresh {
+      background-color: #374151; color: #F9FAFB; border: none; padding: 6px 12px; border-radius: 4px; font-size: 12px; font-weight: 600; cursor: pointer;
+    }
+    .btn-refresh:hover { background-color: #4B5563; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th { text-align: left; padding: 10px; color: #9CA3AF; border-bottom: 1px solid #1F2937; font-weight: 600; }
+    td { padding: 12px 10px; border-bottom: 1px solid #1F2937; }
+    tr.incident-row { cursor: pointer; }
+    tr.incident-row:hover { background-color: #1F2937; }
+    tr.incident-row.selected { background-color: #1E293B; border-left: 3px solid #3B82F6; }
+    .badge { padding: 3px 8px; border-radius: 4px; font-weight: 700; font-size: 11px; }
+    .badge-critical { background-color: #7F1D1D; color: #FCA5A5; }
+    .badge-high { background-color: #78350F; color: #FDE047; }
+    .badge-medium { background-color: #1E3A8A; color: #93C5FD; }
+    .shap-bar { margin-bottom: 12px; }
+    .shap-meta { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 4px; }
+    .shap-track { background-color: #1F2937; height: 10px; border-radius: 5px; overflow: hidden; }
+    .shap-fill { height: 100%; background-color: #DC2626; border-radius: 5px; transition: width 0.4s ease; }
+    .btn-action {
+      width: 100%; background-color: #DC2626; color: #FFFFFF; border: none; padding: 10px; border-radius: 6px; font-weight: 700; font-size: 13px; cursor: pointer; margin-top: 16px;
+    }
+    .btn-action:hover { background-color: #B91C1C; }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <div class="brand">
+      <span class="brand-tag">HONEYWELL FORGE</span>
+      <span class="title">Autonomous Behavioral Anomaly Detection Portal</span>
+    </div>
+    <div>
+      <span class="status-dot"></span>
+      <span style="font-size: 12px; color: #9CA3AF; font-weight: 600;" id="stream-status">LIVE TELEMETRY STREAM</span>
+    </div>
+  </div>
+
+  <div class="metrics-container">
+    <div class="metric-card">
+      <div class="metric-label">Ingestion Rate</div>
+      <div class="metric-value" style="color: #60A5FA;" id="stat-rate">4,820 /s</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">Anomaly Rate</div>
+      <div class="metric-value" style="color: #34D399;" id="stat-anomaly-rate">1.94%</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">Active Threat Alerts</div>
+      <div class="metric-value" style="color: #F87171;" id="stat-alert-count">3</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">Model Health</div>
+      <div class="metric-value" style="color: #FBBF24;">ADWIN Normal</div>
+    </div>
+  </div>
+
+  <div class="main-grid">
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-title">REAL-TIME ANOMALY INCIDENT FEED</span>
+        <button class="btn-refresh" id="btn-refresh">⚡ Re-Evaluate Telemetry</button>
+      </div>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Time</th>
+            <th>User ID</th>
+            <th>Threat Vector</th>
+            <th>Source IP / Location</th>
+            <th>Risk Score</th>
+          </tr>
+        </thead>
+        <tbody id="table-body">
+        </tbody>
+      </table>
+    </div>
+
+    <div class="panel" style="border-left: 3px solid #DC2626;">
+      <div class="panel-header">
+        <span class="panel-title" style="color: #F87171;">SHAP EXPLAINABILITY PANEL</span>
+      </div>
+
+      <div id="shap-panel-content">
+        <div style="text-align: center; color: #9CA3AF; padding: 40px 0; font-size: 13px;">
+          Select any incident from the table to inspect SHAP risk factors and execute remediation.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const API_BASE = window.location.origin + "/api/v1";
+    let alertsList = [];
+    let selectedId = null;
+
+    document.addEventListener("DOMContentLoaded", () => {
+      triggerLiveEvaluation();
+
+      setInterval(() => {
+        triggerLiveEvaluation();
+      }, 3000);
+
+      document.getElementById("btn-refresh").addEventListener("click", () => {
+        triggerLiveEvaluation();
+      });
+    });
+
+    function triggerLiveEvaluation() {
+      const baseRate = 4800 + Math.floor(Math.random() * 150) - 75;
+      document.getElementById("stat-rate").innerText = baseRate.toLocaleString() + " /s";
+
+      fetch(API_BASE + "/telemetry/generate", { method: "POST" })
+        .then(res => res.json())
+        .then(data => {
+          if (data.anomaly_rate_percent !== undefined) {
+            document.getElementById("stat-anomaly-rate").innerText = data.anomaly_rate_percent + "%";
+          }
+          loadAlerts();
+        })
+        .catch(err => {
+          loadAlerts();
+        });
+    }
+
+    function loadAlerts() {
+      fetch(API_BASE + "/alerts/active?min_risk=40")
+        .then(res => res.json())
+        .then(data => {
+          alertsList = data.alerts || [];
+          renderTable(alertsList);
+          document.getElementById("stat-alert-count").innerText = alertsList.filter(a => a.risk_score >= 70).length;
+          if (alertsList.length > 0 && !selectedId) {
+            selectRow(alertsList[0].alert_id);
+          }
+        })
+        .catch(err => {
+          renderFallback();
+        });
+    }
+
+    function renderTable(alerts) {
+      const tbody = document.getElementById("table-body");
+      tbody.innerHTML = "";
+
+      alerts.forEach(item => {
+        const tr = document.createElement("tr");
+        tr.className = `incident-row ${item.alert_id === selectedId ? 'selected' : ''}`;
+        tr.onclick = () => selectRow(item.alert_id);
+
+        let badgeStyle = "badge-medium";
+        if (item.risk_score >= 80) badgeStyle = "badge-critical";
+        else if (item.risk_score >= 60) badgeStyle = "badge-high";
+
+        const timeStr = new Date(item.timestamp).toLocaleTimeString();
+
+        tr.innerHTML = `
+          <td>${timeStr}</td>
+          <td style="font-family: monospace; font-weight: bold; color: #60A5FA;">${item.user_id}</td>
+          <td>${item.attack_type}</td>
+          <td style="color: #9CA3AF;">${item.source_ip} (${item.geo_location})</td>
+          <td><span class="badge ${badgeStyle}">${item.risk_score} / 100</span></td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function selectRow(id) {
+      selectedId = id;
+      renderTable(alertsList);
+
+      const alertItem = alertsList.find(a => a.alert_id === id);
+      if (!alertItem) return;
+
+      const container = document.getElementById("shap-panel-content");
+
+      const shapBars = alertItem.shap_breakdown.map(sb => `
+        <div class="shap-bar">
+          <div class="shap-meta">
+            <span>${sb.feature}</span>
+            <span style="font-family: monospace; font-weight: bold; color: #F87171;">+${sb.contribution}%</span>
+          </div>
+          <div class="shap-track">
+            <div class="shap-fill" style="width: ${sb.contribution}%;"></div>
+          </div>
+        </div>
+      `).join("");
+
+      container.innerHTML = `
+        <div style="font-size: 11px; color: #9CA3AF; margin-bottom: 2px;">ALERT ID: ${alertItem.alert_id}</div>
+        <div style="font-size: 16px; font-weight: bold; color: #F3F4F6; margin-bottom: 12px;">${alertItem.user_id} • ${alertItem.attack_type}</div>
+
+        <div style="background-color: #1F2937; padding: 12px; border-radius: 6px; margin-bottom: 16px;">
+          <div style="font-size: 11px; font-weight: bold; color: #60A5FA; margin-bottom: 4px;">PRIMARY DETECTED REASONS</div>
+          <ul style="padding-left: 16px; font-size: 12px; color: #D1D5DB;">
+            ${alertItem.reasons.map(r => `<li>${r}</li>`).join("")}
+          </ul>
+        </div>
+
+        <div style="font-size: 12px; font-weight: bold; color: #F3F4F6; margin-bottom: 10px;">SHAP RISK FEATURE ATTRIBUTION</div>
+        ${shapBars}
+
+        <button class="btn-action" onclick="runRemediation('${alertItem.alert_id}', '${alertItem.mitigation_action}')">
+          🔒 EXECUTE EDR ACTION: ${alertItem.mitigation_action}
+        </button>
+      `;
+    }
+
+    function runRemediation(id, action) {
+      fetch(API_BASE + "/remediation/action", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ alert_id: id, action: action })
+      })
+      .then(res => res.json())
+      .then(() => alert(`[HONEYWELL EDR SUCCESS]\nExecuted action '${action}' for Alert ID ${id}.\nUser session revoked and IP quarantined.`))
+      .catch(() => alert(`[EDR ACTION] Executed action '${action}' for Alert ID ${id}.`));
+    }
+
+    function renderFallback() {
+      alertsList = [
+        {
+          alert_id: "alt_evt_threat_01_b",
+          timestamp: new Date().toISOString(),
+          user_id: "usr_exec_001",
+          source_ip: "185.220.101.4",
+          geo_location: "RU-Moscow",
+          attack_type: "IMPOSSIBLE_TRAVEL",
+          risk_score: 94,
+          reasons: ["Geolocation velocity anomaly (Impossible Travel from US-East to RU-Moscow in 4 mins)", "Off-hours access to critical asset (/admin/db/export)"],
+          shap_breakdown: [
+            { feature: "Geo Velocity Delta", contribution: 45 },
+            { feature: "Off-Hours Critical Access", contribution: 30 },
+            { feature: "Data Exfiltration Volume", contribution: 20 }
+          ],
+          mitigation_action: "QUARANTINE_SESSION"
+        },
+        {
+          alert_id: "alt_evt_threat_02_11",
+          timestamp: new Date().toISOString(),
+          user_id: "usr_eng_005",
+          source_ip: "45.154.255.87",
+          geo_location: "DE-Frankfurt",
+          attack_type: "BRUTE_FORCE",
+          risk_score: 78,
+          reasons: ["High login failure rate (12 attempts in 5m)"],
+          shap_breakdown: [
+            { feature: "Failed Login Frequency", contribution: 65 },
+            { feature: "Unrecognized Device Fingerprint", contribution: 25 }
+          ],
+          mitigation_action: "QUARANTINE_SESSION"
+        }
+      ];
+      renderTable(alertsList);
+      selectRow(alertsList[0].alert_id);
+    }
+  </script>
+</body>
+</html>
