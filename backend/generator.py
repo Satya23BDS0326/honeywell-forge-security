@@ -35,10 +35,14 @@ class SyntheticLogGenerator:
                 "session_duration_s": random.randint(300, 7200),
                 "bytes_transferred": random.randint(1024, 524288),
                 "is_after_hours": is_after_hours,
+                "user_agent_mismatch": 0,
+                "distinct_resources_touched_5m": random.randint(1, 3),
                 "attack_type": "BENIGN"
             })
 
         now = datetime.datetime.now()
+        
+        # 1. IMPOSSIBLE_TRAVEL
         logs.append({
             "event_id": "evt_threat_01_a",
             "timestamp": now.isoformat(),
@@ -52,6 +56,8 @@ class SyntheticLogGenerator:
             "session_duration_s": 120,
             "bytes_transferred": 2048,
             "is_after_hours": 0,
+            "user_agent_mismatch": 0,
+            "distinct_resources_touched_5m": 1,
             "attack_type": "IMPOSSIBLE_TRAVEL"
         })
         logs.append({
@@ -67,9 +73,12 @@ class SyntheticLogGenerator:
             "session_duration_s": 60,
             "bytes_transferred": 52428800,
             "is_after_hours": 1,
+            "user_agent_mismatch": 1,
+            "distinct_resources_touched_5m": 4,
             "attack_type": "IMPOSSIBLE_TRAVEL"
         })
 
+        # 2. BRUTE_FORCE
         for i in range(12):
             logs.append({
                 "event_id": f"evt_threat_02_{i}",
@@ -80,13 +89,16 @@ class SyntheticLogGenerator:
                 "geo_location": "DE-Frankfurt",
                 "resource_path": "/api/v1/auth",
                 "login_status": "FAILED",
-                "failed_attempts_5m": i + 1,
+                "failed_attempts_5m": i + 15,
                 "session_duration_s": 0,
                 "bytes_transferred": 128,
                 "is_after_hours": 1,
+                "user_agent_mismatch": 0,
+                "distinct_resources_touched_5m": 1,
                 "attack_type": "BRUTE_FORCE"
             })
 
+        # 3. CREDENTIAL_MISUSE
         logs.append({
             "event_id": "evt_threat_03",
             "timestamp": (now + datetime.timedelta(hours=-2)).isoformat(),
@@ -100,7 +112,47 @@ class SyntheticLogGenerator:
             "session_duration_s": 3600,
             "bytes_transferred": 104857600,
             "is_after_hours": 1,
+            "user_agent_mismatch": 0,
+            "distinct_resources_touched_5m": 5,
             "attack_type": "CREDENTIAL_MISUSE"
+        })
+
+        # 4. LATERAL_MOVEMENT
+        logs.append({
+            "event_id": "evt_threat_04",
+            "timestamp": (now + datetime.timedelta(minutes=-15)).isoformat(),
+            "user_id": "usr_eng_030",
+            "device_id": "dev_mac_030",
+            "source_ip": "10.0.4.99",
+            "geo_location": "US-East",
+            "resource_path": "/admin/db/export",
+            "login_status": "SUCCESS",
+            "failed_attempts_5m": 1,
+            "session_duration_s": 900,
+            "bytes_transferred": 15728640,
+            "is_after_hours": 1,
+            "user_agent_mismatch": 0,
+            "distinct_resources_touched_5m": 22,
+            "attack_type": "LATERAL_MOVEMENT"
+        })
+
+        # 5. DEVICE_SPOOFING
+        logs.append({
+            "event_id": "evt_threat_05",
+            "timestamp": (now + datetime.timedelta(minutes=-5)).isoformat(),
+            "user_id": "usr_eng_019",
+            "device_id": "dev_printer_001",
+            "source_ip": "192.168.1.200",
+            "geo_location": "US-East",
+            "resource_path": "/source/repo/core",
+            "login_status": "SUCCESS",
+            "failed_attempts_5m": 0,
+            "session_duration_s": 1800,
+            "bytes_transferred": 8388608,
+            "is_after_hours": 1,
+            "user_agent_mismatch": 1,
+            "distinct_resources_touched_5m": 8,
+            "attack_type": "DEVICE_SPOOFING"
         })
 
         return logs
