@@ -102,20 +102,21 @@ class BehavioralAnomalyEngine:
         criterion = nn.MSELoss()
 
         benign_indices = df_raw[df_raw['attack_type'] == 'BENIGN'].index
+
         if len(benign_indices) > 0:
-            train_tensor = torch.tensor(scaled_features[benign_indices], dtype=torch.float32)
+            train_data = scaled_features[benign_indices].copy()
         else:
-            train_tensor = torch.tensor(scaled_features, dtype=torch.float32)
+            train_data = scaled_features.copy()
 
         self.autoencoder.train()
-        for epoch in range(40):
-            optimizer.zero_grad()
-            outputs = self.autoencoder(train_tensor)
-            loss = criterion(outputs, train_tensor)
-            loss.backward()
-            optimizer.step()
-
-        self.autoencoder.eval()
+        with torch.enable_grad():
+            for epoch in range(30):
+                train_tensor = torch.tensor(train_data, dtype=torch.float32, requires_grad=False)
+                optimizer.zero_grad(set_to_none=True)
+                outputs = self.autoencoder(train_tensor)
+                loss = criterion(outputs, train_tensor)
+                loss.backward()
+                optimizer.step()
         with torch.no_grad():
             all_tensor = torch.tensor(scaled_features, dtype=torch.float32)
             reconstructed = self.autoencoder(all_tensor)
