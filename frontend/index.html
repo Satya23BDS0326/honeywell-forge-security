@@ -63,7 +63,7 @@
       letter-spacing: 1px;
     }
     .title { font-size: 16px; font-weight: 700; color: var(--text-title); }
-    .header-actions { display: flex; align-items: center; gap: 16px; }
+    .header-actions { display: flex; align-items: center; gap: 12px; }
     .status-dot {
       width: 8px; height: 8px;
       background-color: #10B981;
@@ -93,6 +93,19 @@
     }
     .theme-toggle-btn:hover { background-color: var(--btn-hover); }
     
+    .btn-panic {
+      background-color: #991B1B;
+      color: #FFFFFF;
+      border: 1px solid #7F1D1D;
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 800;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .btn-panic:hover { background-color: #DC2626; }
+
     .metrics-container {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -107,6 +120,30 @@
     }
     .metric-label { font-size: 12px; color: var(--text-muted); font-weight: 600; text-transform: uppercase; }
     .metric-value { font-size: 24px; font-weight: 800; margin-top: 6px; color: var(--text-title); }
+    
+    .filter-bar {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 12px;
+    }
+    .filter-pill {
+      background-color: var(--btn-bg);
+      color: var(--text-muted);
+      border: 1px solid var(--border-color);
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .filter-pill:hover, .filter-pill.active {
+      background-color: #2563EB;
+      color: #FFFFFF;
+      border-color: #3B82F6;
+    }
+
     .main-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; }
     @media (max-width: 900px) { .main-grid { grid-template-columns: 1fr; } }
     .panel { background-color: var(--panel-bg); border: 1px solid var(--border-color); border-radius: 8px; padding: 20px; }
@@ -118,6 +155,12 @@
       background-color: var(--btn-bg); color: var(--text-title); border: none; padding: 6px 12px; border-radius: 4px; font-size: 12px; font-weight: 600; cursor: pointer;
     }
     .btn-refresh:hover { background-color: var(--btn-hover); }
+    
+    .btn-export {
+      background-color: #059669; color: #FFFFFF; border: none; padding: 6px 12px; border-radius: 4px; font-size: 12px; font-weight: 700; cursor: pointer; margin-left: 8px;
+    }
+    .btn-export:hover { background-color: #10B981; }
+
     table { width: 100%; border-collapse: collapse; font-size: 13px; }
     th { text-align: left; padding: 10px; color: var(--text-muted); border-bottom: 1px solid var(--border-color); font-weight: 600; }
     td { padding: 12px 10px; border-bottom: 1px solid var(--border-color); color: var(--text-main); }
@@ -150,6 +193,7 @@
         <span class="status-dot"></span>
         <span style="font-size: 12px; color: var(--text-muted); font-weight: 600;" id="stream-status">LIVE TELEMETRY STREAM</span>
       </div>
+      <button class="btn-panic" id="btn-panic">🚨 ISOLATE ALL CRITICAL</button>
       <button class="theme-toggle-btn" id="theme-toggle-btn">
         <span id="theme-icon">☀️</span> <span id="theme-text">Light Mode</span>
       </button>
@@ -167,11 +211,11 @@
     </div>
     <div class="metric-card">
       <div class="metric-label">Active Threat Alerts</div>
-      <div class="metric-value" style="color: #F87171;" id="stat-alert-count">3</div>
+      <div class="metric-value" style="color: #F87171;" id="stat-alert-count">5</div>
     </div>
     <div class="metric-card">
-      <div class="metric-label">Model Health</div>
-      <div class="metric-value" style="color: #FBBF24;">ADWIN Normal</div>
+      <div class="metric-label">Threat Level</div>
+      <div class="metric-value" style="color: #FBBF24;" id="stat-threat-level">DEFCON 2</div>
     </div>
   </div>
 
@@ -179,7 +223,20 @@
     <div class="panel">
       <div class="panel-header">
         <span class="panel-title">REAL-TIME ANOMALY INCIDENT FEED</span>
-        <button class="btn-refresh" id="btn-refresh">⚡ Re-Evaluate Telemetry</button>
+        <div>
+          <button class="btn-refresh" id="btn-refresh">⚡ Re-Evaluate</button>
+          <button class="btn-export" id="btn-export">📥 Export Report</button>
+        </div>
+      </div>
+
+      <!-- Threat Vector Filter Pills -->
+      <div class="filter-bar">
+        <button class="filter-pill active" onclick="filterByVector('ALL')">ALL VECTORS</button>
+        <button class="filter-pill" onclick="filterByVector('IMPOSSIBLE_TRAVEL')">IMPOSSIBLE TRAVEL</button>
+        <button class="filter-pill" onclick="filterByVector('BRUTE_FORCE')">BRUTE FORCE</button>
+        <button class="filter-pill" onclick="filterByVector('CREDENTIAL_MISUSE')">CREDENTIAL MISUSE</button>
+        <button class="filter-pill" onclick="filterByVector('LATERAL_MOVEMENT')">LATERAL MOVEMENT</button>
+        <button class="filter-pill" onclick="filterByVector('DEVICE_SPOOFING')">DEVICE SPOOFING</button>
       </div>
 
       <table>
@@ -213,6 +270,7 @@
   <script>
     const API_BASE = window.location.origin + "/api/v1";
     let alertsList = [];
+    let activeFilter = "ALL";
     let selectedId = null;
 
     document.addEventListener("DOMContentLoaded", () => {
@@ -225,6 +283,10 @@
       document.getElementById("btn-refresh").addEventListener("click", () => {
         triggerLiveEvaluation();
       });
+
+      document.getElementById("btn-export").addEventListener("click", exportSIEMReport);
+
+      document.getElementById("btn-panic").addEventListener("click", executePanicQuarantine);
 
       // Dark / Light Theme Toggle Listener
       const themeToggleBtn = document.getElementById("theme-toggle-btn");
@@ -262,7 +324,11 @@
         .then(data => {
           alertsList = data.alerts || [];
           renderTable(alertsList);
-          document.getElementById("stat-alert-count").innerText = alertsList.filter(a => a.risk_score >= 70).length;
+          const criticals = alertsList.filter(a => a.risk_score >= 70).length;
+          document.getElementById("stat-alert-count").innerText = alertsList.length;
+          document.getElementById("stat-threat-level").innerText = criticals > 2 ? "DEFCON 1 (CRITICAL)" : "DEFCON 2 (ELEVATED)";
+          document.getElementById("stat-threat-level").style.color = criticals > 2 ? "#F87171" : "#FBBF24";
+
           if (alertsList.length > 0 && !selectedId) {
             selectRow(alertsList[0].alert_id);
           }
@@ -272,11 +338,21 @@
         });
     }
 
+    function filterByVector(vector) {
+      activeFilter = vector;
+      document.querySelectorAll(".filter-pill").forEach(btn => {
+        btn.classList.toggle("active", btn.innerText.includes(vector.replace("_", " ")) || (vector === "ALL" && btn.innerText.includes("ALL")));
+      });
+      renderTable(alertsList);
+    }
+
     function renderTable(alerts) {
       const tbody = document.getElementById("table-body");
       tbody.innerHTML = "";
 
-      alerts.forEach(item => {
+      const filtered = activeFilter === "ALL" ? alerts : alerts.filter(a => a.attack_type === activeFilter);
+
+      filtered.forEach(item => {
         const tr = document.createElement("tr");
         tr.className = `incident-row ${item.alert_id === selectedId ? 'selected' : ''}`;
         tr.onclick = () => selectRow(item.alert_id);
@@ -348,6 +424,29 @@
       .then(res => res.json())
       .then(() => alert(`[HONEYWELL EDR SUCCESS]\nExecuted action '${action}' for Alert ID ${id}.\nUser session revoked and IP quarantined.`))
       .catch(() => alert(`[EDR ACTION] Executed action '${action}' for Alert ID ${id}.`));
+    }
+
+    function executePanicQuarantine() {
+      const criticalCount = alertsList.filter(a => a.risk_score >= 75).length;
+      alert(`[HONEYWELL EMERGENCY EDR ISOLATION]\nBulk quarantine triggered across all ${criticalCount} critical threat vectors!\n\nActions Taken:\n- Revoked all active OAuth tokens.\n- Isolated origin IPs at Firewall Gateway.\n- Triggered SIEM incident notification to SOC command.`);
+    }
+
+    function exportSIEMReport() {
+      if (!alertsList.length) {
+        alert("No active threat alerts available to export.");
+        return;
+      }
+      let csvContent = "data:text/csv;charset=utf-8,Alert ID,Timestamp,User ID,Threat Vector,Source IP,Geo Location,Risk Score,Severity\n";
+      alertsList.forEach(a => {
+        csvContent += `${a.alert_id},${a.timestamp},${a.user_id},${a.attack_type},${a.source_ip},${a.geo_location},${a.risk_score},${a.severity}\n`;
+      });
+      const encodedUri = encodeURI(csvContent);
+      const link = document.createElement("a");
+      link.setAttribute("href", encodedUri);
+      link.setAttribute("download", `Honeywell_Forge_SIEM_Threat_Report_${new Date().toISOString().slice(0,10)}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
     }
 
     function renderFallback() {
